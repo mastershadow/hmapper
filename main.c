@@ -203,8 +203,23 @@ int main(int argc, char *argv[]) {
                         }
                     } else if (sampleFormat == SAMPLEFORMAT_UINT && bytePerSample == 2) { // uint16
                         uint16 *uintBuf = (uint16 *)buf;
-                    } else if (sampleFormat == SAMPLEFORMAT_INT) { // two's complement signed integer data
 
+                        int i = 0;
+                        int j = 0;
+                        uint32 currentPixelHeight;
+
+                        for (i = 0; i < sampleOffset; i++) {
+                            currentPixelHeight = uintBuf[i];
+
+                            int outOffset = (strip * sampleOffset + i) * 3;
+                            outImageData[outOffset] = (unsigned char)(0);
+                            outImageData[outOffset + 1] = (unsigned char)((currentPixelHeight & 0x0000FF00) >> 8);
+                            outImageData[outOffset + 2] = (unsigned char)(currentPixelHeight & 0x000000FF);
+                        }
+                    } else if (sampleFormat == SAMPLEFORMAT_INT && bytePerSample == 4) { // int32
+                        printf("Currently INT32 is not supported\n");
+                    } else if (sampleFormat == SAMPLEFORMAT_INT && bytePerSample == 2) { // int16
+                        printf("Currently INT16 is not supported\n");
                     } else if (sampleFormat == SAMPLEFORMAT_IEEEFP && bytePerSample == 4) { // IEEE floating point data
                         float *fpBuf = (float *)buf;
                         int i = 0;
@@ -223,7 +238,9 @@ int main(int argc, char *argv[]) {
 
                     } else if (sampleFormat == SAMPLEFORMAT_IEEEFP && bytePerSample == 8) { // IEEE floating point data
                         double *fpBuf = (double *)buf;
+                        printf("Currently Float64 is not supported\n");
                     } else if (sampleFormat == SAMPLEFORMAT_VOID) { // undefined
+                        printf("Currently Void is not supported\n");
                     }
                 } else { // PLANARCONFIG_SEPARATE
 
