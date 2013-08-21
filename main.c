@@ -11,8 +11,9 @@
 #define OUT_SAMPLEPERPIXEL 3
 #define OUT_BITPERSAMPLE 8
 
-// GDAL specific tags
+#define OUT_FP_MULTIPLIER 100
 
+// GDAL specific tags
 #define TIFFTAG_GDAL_METADATA  42112
 #define TIFFTAG_GDAL_NODATA    42113
 #define TIFFTAG_RPCCOEFFICIENT 50844
@@ -20,32 +21,31 @@
 static TIFFExtendProc _ParentExtender = NULL;
 
 static const TIFFFieldInfo xtiffFieldInfo[] = {
-    { TIFFTAG_GDAL_METADATA,    -1,-1, TIFF_ASCII,  FIELD_CUSTOM,
-      TRUE, FALSE,  (char*) "GDALMetadata" },
-    { TIFFTAG_GDAL_NODATA,      -1,-1, TIFF_ASCII,  FIELD_CUSTOM,
-      TRUE, FALSE,  (char*) "GDALNoDataValue" },
-    { TIFFTAG_RPCCOEFFICIENT,   -1,-1, TIFF_DOUBLE, FIELD_CUSTOM,
-      TRUE, TRUE, (char*) "RPCCoefficient" }
+    { TIFFTAG_GDAL_METADATA, -1, -1, TIFF_ASCII, FIELD_CUSTOM,
+      TRUE, FALSE,  (char *)"GDALMetadata" },
+    { TIFFTAG_GDAL_NODATA, -1, -1, TIFF_ASCII, FIELD_CUSTOM,
+      TRUE, FALSE,  (char *)"GDALNoDataValue" },
+    { TIFFTAG_RPCCOEFFICIENT, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM,
+      TRUE, TRUE, (char *)"RPCCoefficient" }
 };
 
-static void GDALGTiffTagExtender(TIFF *tif)
-{
-  TIFFMergeFieldInfo( tif, xtiffFieldInfo,
-          sizeof(xtiffFieldInfo) / sizeof(xtiffFieldInfo[0]) );  
+static void GDALGTiffTagExtender(TIFF *tif) {
+    TIFFMergeFieldInfo( tif, xtiffFieldInfo, sizeof(xtiffFieldInfo) / sizeof(xtiffFieldInfo[0]) );  
           
-  if (_ParentExtender) 
-      (*_ParentExtender)(tif);
+    if (_ParentExtender) {
+        (*_ParentExtender)(tif);
+    }
 }
 
-static void registerGDALGTiffTagExtender()
-{
-  static bool firstTime = true;
-  if( !firstTime )
-    return;
-  else
-    firstTime = false;
+static void registerGDALGTiffTagExtender() {
+    static bool firstTime = true;
+    if (!firstTime) {
+        return;
+    } else {
+        firstTime = false;
+    }
   
-  _ParentExtender = TIFFSetTagExtender(GDALGTiffTagExtender);
+    _ParentExtender = TIFFSetTagExtender(GDALGTiffTagExtender);
 }
 
 uint32 imageWidth;
@@ -166,13 +166,15 @@ int main(int argc, char *argv[]) {
         assert(samplePerPixel == 1);
         // other is not implemented
         assert(rowsPerStrip == 1);
+
         // OUTPUT BUFFER
         //printf("%lu\n\n", imageWidth * imageLength * OUT_SAMPLEPERPIXEL * sizeof(unsigned char));
         // TODO: this should be allocated as small as possible and reused. for now is ok but it is junk
         outImageData = (unsigned char *)_TIFFmalloc(imageWidth * imageLength * OUT_SAMPLEPERPIXEL * sizeof(unsigned char));
 
         if (stripsNumber > 0) {
-            TIFFGetField(inTif, TIFFTAG_STRIPBYTECOUNTS, &stripByteCounts);   
+            TIFFGetField(inTif, TIFFTAG_STRIPBYTECOUNTS, &stripByteCounts);
+            printf("%d\n", stripByteCounts[0]); 
 
             stripSize = TIFFStripSize(inTif);
             int sampleOffset = stripSize / bytePerSample;
@@ -184,37 +186,44 @@ int main(int argc, char *argv[]) {
                 TIFFReadEncodedStrip(inTif, strip, buf, stripSize);
 
                 if (planarConfig == PLANARCONFIG_CONTIG) {
-                    if (sampleFormat == SAMPLEFORMAT_UINT) { // uint
+                    if (sampleFormat == SAMPLEFORMAT_UINT && bytePerSample == 4) { // uint32
                         uint32 *uintBuf = (uint32 *)buf;
-                        /*
-                        ACCOUNTED BY THE LIBRARY
-                        if (fillOrder == FILLORDER_MSB2LSB) { // big endian FILLORDER_MSB2LSB
-
-                        } else { // little endian FILLORDER_LSB2MSB
-
-                        }
-                        */
 
                         int i = 0;
                         int j = 0;
-                        int col = 0;
                         uint32 currentPixelHeight;
-                        // printf("%d\n", strip * sampleOffset);
-                        for (i = 0; i < sampleOffset; i++) {
-                            col++;
 
-                            currentPixelHeight = 0;
-                            for (j = 0; j < bytePerSample; j++) {
-                                currentPixelHeight += uintBuf[i + j * sampleOffset] << j * 8;
-                            }
+                        for (i = 0; i < sampleOffset; i++) {
+                            currentPixelHeight = uintBuf[i];
 
                             int outOffset = (strip * sampleOffset + i) * 3;
                             outImageData[outOffset] = (unsigned char)((currentPixelHeight & 0x00FF0000) >> 16);
                             outImageData[outOffset + 1] = (unsigned char)((currentPixelHeight & 0x0000FF00) >> 8);
                             outImageData[outOffset + 2] = (unsigned char)(currentPixelHeight & 0x000000FF);
-                            //printf("[%d] %u ", col, currentPixelHeight);
-                        }                    
-                        //printf("\n");
+                        }
+                    } else if (sampleFormat == SAMPLEFORMAT_UINT && bytePerSample == 2) { // uint16
+                        uint16 *uintBuf = (uint16 *)buf;
+                    } else if (sampleFormat == SAMPLEFORMAT_INT) { // two's complement signed integer data
+
+                    } else if (sampleFormat == SAMPLEFORMAT_IEEEFP && bytePerSample == 4) { // IEEE floating point data
+                        float *fpBuf = (float *)buf;
+                        int i = 0;
+                        int j = 0;
+                        uint32 currentPixelHeight;
+
+                        for (i = 0; i < sampleOffset; i++) {
+
+                            currentPixelHeight = (uint32)(fpBuf[i] * OUT_FP_MULTIPLIER);
+
+                            int outOffset = (strip * sampleOffset + i) * 3;
+                            outImageData[outOffset] = (unsigned char)((currentPixelHeight & 0x00FF0000) >> 16);
+                            outImageData[outOffset + 1] = (unsigned char)((currentPixelHeight & 0x0000FF00) >> 8);
+                            outImageData[outOffset + 2] = (unsigned char)(currentPixelHeight & 0x000000FF);
+                        }
+
+                    } else if (sampleFormat == SAMPLEFORMAT_IEEEFP && bytePerSample == 8) { // IEEE floating point data
+                        double *fpBuf = (double *)buf;
+                    } else if (sampleFormat == SAMPLEFORMAT_VOID) { // undefined
                     }
                 } else { // PLANARCONFIG_SEPARATE
 
