@@ -1,3 +1,11 @@
+/*
+ * Copyright (c) 2014 Eduard Roccatello
+ *
+ * HMapper is a GeoTIFF converter used to convert grayscale files into RGB ones while
+ * keeping the number of the levels of grey. Useful to deploy heightmaps over WMS services
+ *
+ * Released under the GNU General Public License
+ */
 #include "xtiffio.h"
 #include "geotiff.h"
 #include <math.h>
@@ -60,7 +68,7 @@ uint16 *geoKeyDirectory;
 char *geoAsciiParams;
 char *geoGdalNodata;
 
-void writeOutputStrips(char *outFile, char *outImageData, uint32 stripSize, uint32 rowsPerStrip) {
+void writeOutputStrips(char *outFile, unsigned char *outImageData, uint32 stripSize, uint32 rowsPerStrip) {
 
     TIFF *outTif = XTIFFOpen(outFile, "w+");
     if (outTif) {
