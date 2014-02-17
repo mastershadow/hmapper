@@ -21,6 +21,13 @@ Height data is multiplied by **OUT_FP_MULTIPLIER** (100 by default) in order to 
 
 This is hard coded right now so... fork me and make it an option :)
 
+## Requirements
+* libtiff
+* libgeotiff
+
+On OS X just do:
+
+brew install libgeotiff
 
 
 ### More?
