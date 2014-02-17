@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2014 Eduard Roccatello
  *
- * HMapper is a GeoTIFF converter used to convert grayscale files into RGB ones while
+ * Hmapper is a GeoTIFF converter used to convert grayscale files into RGB ones while
  * keeping the number of the levels of grey. Useful to deploy heightmaps over WMS services
  *
  * Released under the GNU General Public License
