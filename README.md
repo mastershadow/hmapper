@@ -27,11 +27,10 @@ This is hard coded right now so... fork me and make it an option :)
 
 On OS X just do:
 
-brew install libgeotiff
+`brew install libgeotiff`
 
 
 ### More?
 
 Follow [@edurocc](http://twitter.com/edurocc) on Twitter.
 
-For feedback, use the menu `Help` - `Send Feedback`
